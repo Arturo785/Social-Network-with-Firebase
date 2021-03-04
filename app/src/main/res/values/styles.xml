@@ -13,6 +13,9 @@
         <item name="actionBarStyle">@style/ToolbarStyle</item>
         <item name="cardViewStyle">@style/CardViewStyle</item>
         <item name="textInputStyle">@style/TextInputLayoutStyle</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">#000000</item>
     </style>
 
     <style name="TextInputLayoutStyle" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
