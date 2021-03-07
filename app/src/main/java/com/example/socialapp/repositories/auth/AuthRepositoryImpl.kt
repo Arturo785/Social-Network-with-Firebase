@@ -32,12 +32,17 @@ class AuthRepositoryImpl : AuthRepository {
                 val user = User(uid, username)
                 users.document(uid).set(user).await()
 
-                Resource.Success(result)
+                Resource.Success(result) // is the inferred return
             }
         }
     }
 
     override suspend fun login(email: String, password: String): Resource<AuthResult> {
-        TODO("Not yet implemented")
+        return withContext(Dispatchers.IO) {
+            safeCall {
+                val result = auth.signInWithEmailAndPassword(email, password).await()
+                Resource.Success(result)
+            }
+        }
     }
 }

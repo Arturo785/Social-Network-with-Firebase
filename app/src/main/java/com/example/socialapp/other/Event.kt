@@ -28,7 +28,7 @@ class EventObserver<T>(
     private inline val onSuccess: ((T) -> Unit)
 ) : Observer<Event<Resource<T>>> {
 
-    // this is inherited from Observer
+    // this is inherited from Observer class default from liveData
     override fun onChanged(t: Event<Resource<T>>?) {
         when(val content = t?.peekContent()) {
 

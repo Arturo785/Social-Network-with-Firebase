@@ -25,8 +25,13 @@ class AuthViewModel @ViewModelInject constructor(
     // an event can only be handled once, the resource has 3 states, T type will be AuthResult
     private val _registerStatus = MutableLiveData<Event<Resource<AuthResult>>> () // private and can change
 
+    private val _loginStatus = MutableLiveData<Event<Resource<AuthResult>>> () // private and can change
+
     // can not change and to be observed
     val registerStatus: LiveData<Event<Resource<AuthResult>>> = _registerStatus
+
+    val loginStatus: LiveData<Event<Resource<AuthResult>>> = _loginStatus
+
 
     fun register(email : String, username : String, password : String, repeatedPassword : String){
 
@@ -64,6 +69,20 @@ class AuthViewModel @ViewModelInject constructor(
             val result = repository.register(email, username, password)
             // an event can only be handled once, the resource has 3 states, T type will be AuthResult
             _registerStatus.postValue(Event(result))
+        }
+    }
+
+    fun login(email: String, password: String){
+        if(email.isEmpty() || password.isEmpty()) {
+            val error = applicationContext.getString(R.string.error_input_empty)
+            _loginStatus.postValue(Event(Resource.Error(message = error)))
+        }
+        else {
+            _loginStatus.postValue(Event(Resource.Loading()))
+            viewModelScope.launch(dispatcher) {
+                val result = repository.login(email, password)
+                _loginStatus.postValue(Event(result))
+            }
         }
     }
 
