@@ -11,7 +11,7 @@ data class User(
     val profilePictureUrl : String = DEFAULT_PROFILE_PICTURE_URL,
     val description : String = "",
     var follows : List<String> = listOf(),
-    @Exclude
+    @get:Exclude
     var isFollowing : Boolean = false
 ) {
 }
