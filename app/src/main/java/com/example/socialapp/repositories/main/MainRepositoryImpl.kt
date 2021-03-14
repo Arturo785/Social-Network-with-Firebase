@@ -113,8 +113,8 @@ class MainRepositoryImpl : MainRepository {
                     "likedBy",
                     if(uid in currentLikes) currentLikes - uid // removes like
                     else {
-                        currentLikes + uid
                         isLiked = true
+                        currentLikes + uid
                     }
                 )
             }.await()
@@ -129,6 +129,58 @@ class MainRepositoryImpl : MainRepository {
             storage.getReferenceFromUrl(post.imageUrl).delete().await()
 
             Resource.Success(post)
+        }
+    }
+
+    override suspend fun getPostForProfile(uid: String): Resource<List<Post>> = withContext(IO){
+        safeCall {
+            // all the posts from my profile
+            val profilePosts = posts.whereEqualTo("authorUid", uid)
+                .orderBy("date", Query.Direction.DESCENDING)
+                .get()
+                .await()
+                .toObjects(Post::class.java)
+                .onEach { post ->
+                    val user = getUser(post.authorUid).data!!
+                    post.authorProfilePictureUrl = user.profilePictureUrl
+                    post.authorUsername = user.username
+                    post.isLiked = uid in post.likedBy // if present
+                }
+
+            Resource.Success(profilePosts)
+        }
+    }
+
+    override suspend fun toggleFollowForUser(uid: String): Resource<Boolean> = withContext(IO){
+        safeCall {
+            var isFollowing = false
+
+            firestore.runTransaction { transition ->
+                val currentUid = auth.uid!!
+                val currentUser = transition.get(users.document(currentUid)).toObject(User::class.java)!!
+
+                // checks if we are following that person
+                isFollowing = uid in currentUser.follows
+
+                val newFollows = if (isFollowing){
+                    currentUser.follows - uid
+                }else{
+                    currentUser.follows + uid
+                }
+
+                transition.update(users.document(currentUid), "follows", newFollows)
+            }.await()
+
+            Resource.Success(!isFollowing)
+        }
+    }
+
+    override suspend fun searchUser(query: String): Resource<List<User>> = withContext(IO){
+        safeCall {
+            val usersResult = users.whereGreaterThanOrEqualTo("username", query.toUpperCase(Locale.ROOT))
+                .get().await().toObjects(User::class.java)
+
+            Resource.Success(usersResult)
         }
     }
 }

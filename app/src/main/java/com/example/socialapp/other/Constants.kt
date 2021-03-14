@@ -4,3 +4,4 @@ const val DEFAULT_PROFILE_PICTURE_URL = "https://firebasestorage.googleapis.com/
 const val MAX_USERNAME_LENGTH = 8
 const val MIN_USERNAME_LENGTH = 3
 const val MIN_PASSWORD_LENGTH = 8
+const val SEARCH_TIME_DELAY = 700L //ms
