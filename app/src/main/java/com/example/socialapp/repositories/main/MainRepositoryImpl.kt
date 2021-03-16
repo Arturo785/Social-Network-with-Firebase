@@ -1,8 +1,11 @@
 package com.example.socialapp.repositories.main
 
 import android.net.Uri
+import com.example.socialapp.data.entities.Comment
 import com.example.socialapp.data.entities.Post
+import com.example.socialapp.data.entities.ProfileUpdate
 import com.example.socialapp.data.entities.User
+import com.example.socialapp.other.DEFAULT_PROFILE_PICTURE_URL
 import com.example.socialapp.other.Resource
 import com.example.socialapp.other.safeCall
 import com.google.firebase.auth.FirebaseAuth
@@ -183,4 +186,77 @@ class MainRepositoryImpl : MainRepository {
             Resource.Success(usersResult)
         }
     }
+
+    override suspend fun createComment(commentText: String, postId: String) = withContext(IO) {
+            safeCall {
+                val uid = auth.uid!!
+                val commentId = UUID.randomUUID().toString()
+                val user = getUser(uid).data!!
+                val comment = Comment(
+                    commentId,
+                    postId,
+                    uid,
+                    user.username,
+                    user.profilePictureUrl,
+                    commentText
+                )
+                comments.document(commentId).set(comment).await()
+                Resource.Success(comment)
+            }
+        }
+
+    override suspend fun deleteComment(comment: Comment) = withContext(IO) {
+        safeCall {
+            comments.document(comment.commentId).delete().await()
+            Resource.Success(comment)
+        }
+    }
+
+    override suspend fun getCommentsForPost(postId: String) = withContext(IO){
+        safeCall {
+            val commentsForPost = comments
+                //gets the specific post
+                .whereEqualTo("postId", postId)
+                .orderBy("date", Query.Direction.DESCENDING)
+                .get()
+                .await()
+                .toObjects(Comment::class.java)
+                .onEach {comment ->
+                    // gets the data of each comment
+                    val user = getUser(comment.uid!!).data!!
+                    comment.username = user.username
+                    comment.profilePictureUrl = user.profilePictureUrl
+                }
+
+            Resource.Success(commentsForPost)
+        }
+    }
+
+    override suspend fun updateProfile(profileUpdate: ProfileUpdate) = withContext(IO) {
+        safeCall {
+            val imageUrl = profileUpdate.profilePictureUri?.let { uri ->
+                updateProfilePicture(profileUpdate.uidToUpdate, uri).toString()
+            }
+            val map = mutableMapOf(
+                "username" to profileUpdate.username,
+                "description" to profileUpdate.description
+            )
+            imageUrl?.let { url ->
+                map["profilePictureUrl"] = url
+            }
+            users.document(profileUpdate.uidToUpdate).update(map.toMap()).await()
+            Resource.Success(Any())
+        }
+    }
+
+    override suspend fun updateProfilePicture(uid: String, imageUri: Uri) = withContext(IO) {
+            val storageRef = storage.getReference(uid)
+            val user = getUser(uid).data!!
+
+            // not the default one
+            if (user.profilePictureUrl != DEFAULT_PROFILE_PICTURE_URL) {
+                storage.getReferenceFromUrl(user.profilePictureUrl).delete().await()
+            }
+            storageRef.putFile(imageUri).await().metadata?.reference?.downloadUrl?.await()
+        }
 }
