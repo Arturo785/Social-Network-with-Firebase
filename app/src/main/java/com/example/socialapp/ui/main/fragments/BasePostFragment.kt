@@ -31,8 +31,6 @@ abstract class BasePostFragment(
     @Inject
     lateinit var postAdapter: PostAdapter
 
-    // to hold a reference to the various progress bar that will be
-    protected abstract val postProgressBar : ProgressBar
     // to implement our own viewModel
     protected abstract val basePostViewModel : BasePostViewModel
 
@@ -75,21 +73,21 @@ abstract class BasePostFragment(
         basePostViewModel.likePostStatus.observe(viewLifecycleOwner, EventObserver(
             onError = {
                 curLikedIndex?.let { index ->
-                    postAdapter.posts[index].isLiking = false
+                    postAdapter.peek(index)?.isLiking = false
                     postAdapter.notifyItemChanged(index)
                 }
                 snackbar(it)
             },
             onLoading = {
                 curLikedIndex?.let { index ->
-                    postAdapter.posts[index].isLiking = true
+                    postAdapter.peek(index)?.isLiking = true
                     postAdapter.notifyItemChanged(index)
                 }
             },
         ){ isLiked ->
             curLikedIndex?.let { index ->
                 val uid = FirebaseAuth.getInstance().uid!!
-                postAdapter.posts[index].apply {
+                postAdapter.peek(index)?.apply {
                     this.isLiked = isLiked
                     isLiking = false
 
@@ -104,31 +102,6 @@ abstract class BasePostFragment(
             }
         })
 
-
-        basePostViewModel.deletePostStatus.observe(viewLifecycleOwner, EventObserver(
-            onError = {
-                snackbar(it)
-            },
-            onLoading = {
-
-            }
-        ){deletedPost ->
-            postAdapter.posts -= deletedPost
-        })
-
-
-        basePostViewModel.posts.observe(viewLifecycleOwner, EventObserver(
-            onError = {
-                postProgressBar.isVisible = false
-                snackbar(it)
-            },
-            onLoading = {
-                postProgressBar.isVisible = true
-            }
-        ) { posts ->
-            postProgressBar.isVisible = false
-            postAdapter.posts = posts
-        })
 
         basePostViewModel.likedByUsers.observe(viewLifecycleOwner, EventObserver(
             onError = {

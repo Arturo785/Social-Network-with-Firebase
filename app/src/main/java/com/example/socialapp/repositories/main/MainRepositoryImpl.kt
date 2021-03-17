@@ -53,10 +53,17 @@ class MainRepositoryImpl : MainRepository {
 
     override suspend fun getUsers(uids: List<String>): Resource<List<User>> = withContext(Dispatchers.IO){
         safeCall {
-            val usersList = users.whereIn("uid", uids).orderBy("username").get()
-                .await().toObjects(User::class.java)
+            val chunks = uids.chunked(10)
+            val resultList = mutableListOf<User>()
 
-            Resource.Success(usersList)
+            chunks.forEach { chunk ->
+                val usersList = users.whereIn("uid", uids).orderBy("username").get()
+                    .await().toObjects(User::class.java)
+
+                resultList.addAll(usersList)
+            }
+
+            Resource.Success(resultList)
         }
     }
 

@@ -4,13 +4,21 @@ import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.example.socialapp.data.entities.Post
 import com.example.socialapp.data.entities.User
+import com.example.socialapp.data.pagingSource.ProfilePostsPagingSource
 import com.example.socialapp.other.Event
+import com.example.socialapp.other.PAGER_SIZE
 import com.example.socialapp.other.Resource
 import com.example.socialapp.repositories.main.MainRepository
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 class ProfileViewModel @ViewModelInject constructor(
@@ -25,20 +33,6 @@ class ProfileViewModel @ViewModelInject constructor(
     private val _followStatus = MutableLiveData<Event<Resource<Boolean>>>()
     val followStatus : LiveData<Event<Resource<Boolean>>> = _followStatus
 
-    private val _posts = MutableLiveData<Event<Resource<List<Post>>>>()
-
-    override val posts: LiveData<Event<Resource<List<Post>>>>
-        get() = _posts
-
-    override fun getPosts(uid: String) {
-        _posts.postValue(Event(Resource.Loading()))
-
-        viewModelScope.launch(dispatcher) {
-            // this is already a resource
-            val result = repository.getPostForProfile(uid)
-            _posts.postValue(Event(result))
-        }
-    }
 
     fun toggleFollowForUser(uid: String) {
         _followStatus.postValue(Event(Resource.Loading()))
@@ -58,7 +52,15 @@ class ProfileViewModel @ViewModelInject constructor(
             val result = repository.getUser(uid)
             _profileMeta.postValue(Event(result))
         }
-        getPosts(uid)
+    }
+
+    fun getPagingFlow(uid : String) : Flow<PagingData<Post>>{
+        val pagingSource = ProfilePostsPagingSource(FirebaseFirestore.getInstance(),
+            uid
+        )
+        return Pager(PagingConfig(PAGER_SIZE)){
+            pagingSource
+        }.flow.cachedIn(viewModelScope)
     }
 
 }
